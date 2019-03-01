@@ -108,7 +108,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir)MessageCommunicationLib</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)MessageCommunicationLib;$(SolutionDir)UtilityLib</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -161,10 +161,12 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="handle_clients.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="handle_clients.c" />
     <ClCompile Include="MessageServer.c" />
     <ClCompile Include="stdafx.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
@@ -176,6 +178,9 @@
   <ItemGroup>
     <ProjectReference Include="..\MessageCommunicationLib\MessageCommunicationLib.vcxproj">
       <Project>{26f871ba-570a-4db0-9a14-3657e3af2eca}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\UtilityLib\UtilityLib.vcxproj">
+      <Project>{7c7ca9f1-cd0d-449a-9b52-d8792ddc1410}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
