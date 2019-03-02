@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MessageClient", "MessageClient\MessageClient.vcxproj", "{4D1AE5B0-3324-4798-B6F3-C70B6B3AA4B8}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -14,6 +14,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MessageServer", "MessageSer
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MessageCommunicationLib", "MessageCommunicationLib\MessageCommunicationLib.vcxproj", "{26F871BA-570A-4DB0-9A14-3657E3AF2ECA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "UtilityLib", "UtilityLib\UtilityLib.vcxproj", "{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -47,8 +49,19 @@ Global
 		{26F871BA-570A-4DB0-9A14-3657E3AF2ECA}.Release|x64.Build.0 = Release|x64
 		{26F871BA-570A-4DB0-9A14-3657E3AF2ECA}.Release|x86.ActiveCfg = Release|Win32
 		{26F871BA-570A-4DB0-9A14-3657E3AF2ECA}.Release|x86.Build.0 = Release|Win32
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Debug|x64.ActiveCfg = Debug|x64
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Debug|x64.Build.0 = Debug|x64
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Debug|x86.ActiveCfg = Debug|Win32
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Debug|x86.Build.0 = Debug|Win32
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Release|x64.ActiveCfg = Release|x64
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Release|x64.Build.0 = Release|x64
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Release|x86.ActiveCfg = Release|Win32
+		{7C7CA9F1-CD0D-449A-9B52-D8792DDC1410}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {373B5206-5048-47EF-9143-EE19B4FC0374}
 	EndGlobalSection
 EndGlobal
