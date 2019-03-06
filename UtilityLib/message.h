@@ -3,6 +3,8 @@
 
 #include "stdafx.h"
 
+#define MAX_BUFFER_SIZE 512
+
 typedef enum {
     CM_ECHO,
     CM_REGISTER,
@@ -13,7 +15,7 @@ typedef enum {
     CM_SENDFILE,
     CM_LIST,
     CM_HISTORY,
-    CM_FAILED
+    CM_CONNECT
 } CM_OP_CODE;
 
 typedef struct _CM_MESSAGE
