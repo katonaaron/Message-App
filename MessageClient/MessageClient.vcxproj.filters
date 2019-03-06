@@ -24,12 +24,24 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="receive_from_server.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="client_operations.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MessageClient.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="stdafx.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="receive_from_server.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="client_operations.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
