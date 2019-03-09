@@ -1,5 +1,4 @@
-#include "stdafx.h"
-#include "error.h"
+#include "common.h"
 
 void PrintError(CM_ERROR Code, const TCHAR * Function)
 {

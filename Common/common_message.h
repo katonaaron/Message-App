@@ -1,11 +1,8 @@
-#ifndef _MESSAGE_H_
-#define _MESSAGE_H_
+#pragma once
 
-#include "stdafx.h"
+#include "common.h"
 
-#define MAX_BUFFER_SIZE 512
-
-typedef enum {
+typedef enum _CM_OP_CODE {
     CM_ECHO,
     CM_REGISTER,
     CM_LOGIN,
@@ -24,5 +21,3 @@ typedef struct _CM_MESSAGE
     CM_SIZE Size;
     BYTE Buffer[1];
 } CM_MESSAGE;
-
-#endif // _MESSAGE_H_

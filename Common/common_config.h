@@ -1,0 +1,8 @@
+#pragma once
+
+#include "common.h"
+
+#define MAX_INPUT_LENGTH 256
+#define MAX_INPUT_BUFFER_SIZE (MAX_INPUT_LENGTH * sizeof(TCHAR))
+#define MAX_MESSAGE_BUFFER_SIZE MAX_INPUT_BUFFER_SIZE
+#define MAX_MESSAGE_SIZE (MAX_MESSAGE_BUFFER_SIZE + sizeof(CM_MESSAGE))

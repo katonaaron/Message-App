@@ -107,7 +107,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <AdditionalIncludeDirectories>$(SolutionDir)MessageCommunicationLib;$(SolutionDir)UtilityLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)MessageCommunicationLib;$(SolutionDir)Common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -174,8 +174,11 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\UtilityLib\UtilityLib.vcxproj">
-      <Project>{7c7ca9f1-cd0d-449a-9b52-d8792ddc1410}</Project>
+    <ProjectReference Include="..\Common\Common.vcxproj">
+      <Project>{d646138d-3ab1-476c-8630-07fb394b90a4}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MessageCommunicationLib\MessageCommunicationLib.vcxproj">
+      <Project>{26f871ba-570a-4db0-9a14-3657e3af2eca}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
