@@ -110,7 +110,7 @@ CM_ERROR SendMessageToServer(CM_CLIENT * Client, void * Message, CM_SIZE Message
             message->Size = MessageSize - i * MAX_MESSAGE_BUFFER_SIZE;
         }
 
-        memcpy(message->Buffer, Message, message->Size);
+        memcpy(message->Buffer, (BYTE*)Message + i * MAX_MESSAGE_BUFFER_SIZE, message->Size);
 
         error = CopyDataIntoBuffer(dataBuffer, (const CM_BYTE*)message, GET_MESSAGE_SIZE(message->Size));
         if (CM_IS_ERROR(error))
@@ -180,7 +180,7 @@ CM_ERROR SendMessageToClient(CM_SERVER_CLIENT * Client, void * Message, CM_SIZE 
             message->Size = MessageSize - i * MAX_MESSAGE_BUFFER_SIZE;
         }
 
-        memcpy(message->Buffer, Message, message->Size);
+        memcpy(message->Buffer, (BYTE*)Message + i * MAX_MESSAGE_BUFFER_SIZE, message->Size);
 
         error = CopyDataIntoBuffer(dataBuffer, (const CM_BYTE*)message, GET_MESSAGE_SIZE(message->Size));
         if (CM_IS_ERROR(error))
