@@ -1,9 +1,14 @@
 #pragma once
 
-#include "stdafx.h"
-#include "communication_api.h"
-#include "UtilityLib.h"
+#include "common.h"
 
-#define MAX_INPUT_LENGTH 256
+typedef enum _CM_VALIDATION
+{
+    CM_CREDENTIALS_OK = 0,
+    CM_INVALID_USERNAME,
+    CM_INVALID_PASSWORD,
+    CM_WEAK_PASSWORD
+}CM_VALIDATION, *PCM_VALIDATION;
 
-void ReadCommand(CM_CLIENT* Client);
+void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread);
+CM_VALIDATION Validate(TCHAR* Username, TCHAR* Password);

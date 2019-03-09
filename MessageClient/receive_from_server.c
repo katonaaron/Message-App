@@ -1,38 +1,38 @@
 #include "stdafx.h"
 #include "receive_from_server.h"
 
-//TODO what if fails??
 DWORD WINAPI ReceiveFromServer(LPVOID Param)
 {
+
+    DWORD rollback = 0, result;
     CM_ERROR error;
-    CM_RECEIVER_DATA* receiverData = (CM_RECEIVER_DATA*)Param;
-    CM_DATA_BUFFER* dataToReceive = NULL;
-    CM_SIZE dataToReceiveSize = MAX_BUFFER_SIZE * sizeof(TCHAR);
-    CM_SIZE receivedByteCount = 0;
+    CM_CLIENT_CONNECTION* connection = (CM_CLIENT_CONNECTION*)Param;
     CM_MESSAGE* message = NULL;
-    
-    error = CreateDataBuffer(&dataToReceive, dataToReceiveSize);
-    if (CM_IS_ERROR(error))
-    {
-        PrintError(error, TEXT("CreateDataBuffer"));
-        return 0;
-    }
 
     while (TRUE)
     {
-        receivedByteCount = 0;
-        error = ReceiveDataFormServer(receiverData->Client, dataToReceive, &receivedByteCount);
-        if (CM_IS_ERROR(error))
+        error = ReceiveMessageFromServer(connection->Client, &message);
+        result = WaitForSingleObject(connection->StartStopEvent, 0);
+        if (WAIT_OBJECT_0 == result)
         {
-            PrintError(error, TEXT("ReceiveDataFormServer"));
+            error = CM_SUCCESS;
             goto receive_from_server_cleanup;
         }
-
-        message = (CM_MESSAGE*)dataToReceive->DataBuffer;
+        else if (WAIT_TIMEOUT != result)
+        {
+            PrintError(GetLastError(), TEXT("WaitForSingleObject"));
+            goto receive_from_server_cleanup;
+        }
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("ReceiveMessageFromServer"));
+            goto receive_from_server_cleanup;
+        }
 
         switch (message->Operation)
         {
         case CM_ECHO:
+            _tprintf_s(TEXT("%s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_REGISTER:
             break;
@@ -51,14 +51,13 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
         case CM_HISTORY:
             break;
         case CM_CONNECT:
-            *(receiverData->Connected) = (BOOL)message->Buffer[0];
-            if (!SetEvent(receiverData->StartEvent))
+            connection->IsConnected = (BOOL)message->Buffer[0];
+            if (!SetEvent(connection->StartStopEvent))
             {
                 PrintError(GetLastError(), TEXT("SetEvent"));
-                //TODO FAIL???
                 goto receive_from_server_cleanup;
             }
-            if (!(*(receiverData->Connected)))
+            if (!connection->IsConnected)
             {
                 goto receive_from_server_cleanup;
             }
@@ -66,10 +65,16 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
         default:
             break;
         }
-
+        free(message);
+        message = NULL;
     }
 
 receive_from_server_cleanup:
-    DestroyDataBuffer(dataToReceive);
+    switch (rollback)
+    {
+    default:
+        free(message);
+        break;
+    }
     return 0;
 }

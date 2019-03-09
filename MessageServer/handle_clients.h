@@ -1,7 +1,7 @@
 #pragma once
 
 #include "stdafx.h"
-#include "UtilityLib.h"
+#include "common.h"
 
 typedef struct _CM_SERVER_CLIENT_DATA
 {
