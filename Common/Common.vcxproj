@@ -156,9 +156,11 @@
     <ClInclude Include="common_config.h" />
     <ClInclude Include="common_error.h" />
     <ClInclude Include="common_message.h" />
+    <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common_error.c" />
+    <ClCompile Include="common_message.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MessageCommunicationLib\MessageCommunicationLib.vcxproj">

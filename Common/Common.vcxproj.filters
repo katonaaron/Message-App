@@ -27,9 +27,15 @@
     <ClInclude Include="common_message.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common_error.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="common_message.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,8 +1,13 @@
 #pragma once
 
+#include "targetver.h"
+
 #include <Windows.h>
 #include <tchar.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 #include "communication_api.h"
 
