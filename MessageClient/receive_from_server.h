@@ -4,12 +4,12 @@
 #include "communication_api.h"
 #include "UtilityLib.h"
 
-typedef struct _CM_RECEIVER_DATA
+typedef struct _CM_CLIENT_CONNECTION
 {
     CM_CLIENT* Client;
-    HANDLE StartEvent;
-    BOOL* Connected;
-} CM_RECEIVER_DATA;
+    HANDLE StartStopEvent;
+    BOOL IsConnected;
+} CM_CLIENT_CONNECTION;
 
 
 DWORD WINAPI ReceiveFromServer(LPVOID Param);
