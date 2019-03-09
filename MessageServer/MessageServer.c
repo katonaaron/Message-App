@@ -2,7 +2,7 @@
 //
 
 #include "stdafx.h"
-#include "UtilityLib.h"
+#include "common.h"
 #include "handle_clients.h"
 
 #define MAX_THREADS 10
@@ -81,7 +81,7 @@ int _tmain(int argc, TCHAR* argv[])
     }
     rollback++;
 
-    error = CreateDataBuffer(&received, sizeof(CM_MESSAGE) + MAX_BUFFER_SIZE);
+    error = CreateDataBuffer(&received, MAX_MESSAGE_SIZE);
     if (CM_IS_ERROR(error))
     {
         PrintError(error, TEXT("CreateDataBuffer"));

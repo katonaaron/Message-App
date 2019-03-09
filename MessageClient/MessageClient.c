@@ -1,10 +1,7 @@
 // MessageClient.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
-#include "communication_api.h"
-#include "UtilityLib.h"
-
+#include "common.h"
 #include "receive_from_server.h"
 #include "client_operations.h"
 
@@ -17,7 +14,7 @@ int _tmain(int argc, TCHAR* argv[])
     EnableCommunicationModuleLogger();
 
     INT retVal = 0, rollback = 0;
-    CM_ERROR error = CM_SUCCESS;
+    CM_ERROR error;
 
     CM_CLIENT_CONNECTION connection = { NULL, NULL, FALSE };
     HANDLE receiverThread = NULL;
@@ -60,7 +57,7 @@ int _tmain(int argc, TCHAR* argv[])
     }
     rollback = 4;
 
-    //TODO: Should we have a timeout?
+    
     HANDLE handles[2];
     handles[0] = receiverThread;
     handles[1] = connection.StartStopEvent;
@@ -69,7 +66,7 @@ int _tmain(int argc, TCHAR* argv[])
     {
         if (WAIT_OBJECT_0 == result)
         {
-            _tprintf_s(TEXT("Unexpected error: Receiver thread closed\n"));
+            PrintErrorMessage(TEXT("Receiver thread closed"));
         }
         else
         {
@@ -103,6 +100,11 @@ main_cleanup:
             rollback = 4;
             retVal = -1;
             goto main_cleanup;
+        }
+        error = SendMessageToServer(connection.Client, "", 0, CM_EXIT);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("SendMessageToServer"));
         }
         UninitCommunicationModule();
         result = WaitForSingleObject(receiverThread, INFINITE);
