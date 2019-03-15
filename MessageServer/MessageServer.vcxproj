@@ -161,24 +161,14 @@
     <Text Include="ReadMe.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cctree.h" />
-    <ClInclude Include="server_common.h" />
     <ClInclude Include="handle_clients.h" />
     <ClInclude Include="list.h" />
-    <ClInclude Include="queue.h" />
     <ClInclude Include="users.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cctree.c" />
     <ClCompile Include="handle_clients.c" />
     <ClCompile Include="MessageServer.c" />
-    <ClCompile Include="queue.c" />
-    <ClCompile Include="stdafx.c">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
+    <ClCompile Include="users.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Common\Common.vcxproj">
