@@ -5,22 +5,40 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
     UNREFERENCED_PARAMETER(Instance);
     UNREFERENCED_PARAMETER(Work);
 
-    CM_SERVER_CLIENT_DATA* data = (CM_SERVER_CLIENT_DATA*)Parameter;
     INT rollback = 0;
     CM_ERROR error = CM_SUCCESS;
+
+    CM_USER_CONNECTION* userConnection = (CM_USER_CONNECTION*)Parameter;
+    CM_SERVER_CLIENT* client = userConnection->Client;
     CM_MESSAGE* message = NULL;
 
-    error = SendMessageToClient(data->Client, &data->Accept, sizeof(BOOL), CM_CONNECT);
+    error = SendMessageToClient(client, &userConnection->ServerAccepted, sizeof(BOOL), CM_CONNECT);
     if (CM_IS_ERROR(error))
     {
         PrintError(error, TEXT("SendMessageToClient"));
         goto process_client_cleanup;
     }
 
+    if (userConnection->ServerAccepted)
+    {
+        error = UserConnectionAdd(userConnection);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("UserConnectionAdd"));
+            goto process_client_cleanup;
+        }
+    }
+    else
+    {
+        goto process_client_cleanup;
+    }
+    rollback = 1;
+
+
     BOOL exit = FALSE;
     while (!exit)
     {
-        error = ReceiveMessageFromClient(data->Client, &message);
+        error = ReceiveMessageFromClient(client, &message);
         if (CM_IS_ERROR(error))
         {
             PrintError(error, TEXT("ReceiveMessageFromClient"));
@@ -31,7 +49,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
         {
         case CM_ECHO:
             _tprintf_s(TEXT("%s\n"), (TCHAR*)message->Buffer);
-            error = SendMessageToClient(data->Client, message->Buffer, message->Size, CM_ECHO);
+            error = SendMessageToClient(client, message->Buffer, message->Size, CM_ECHO);
             if (CM_IS_ERROR(error))
             {
                 PrintError(error, TEXT("SendMessageToClient"));
@@ -127,8 +145,14 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
 process_client_cleanup:
     switch (rollback)
     {
+    case 1:
+        error = UserConnectionRemove(userConnection);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("UserConnectionRemove"));
+        }
     default:
-        AbandonClient(data->Client);
+        UserConnectionDestroy(userConnection);
         free(message);
         break;
     }

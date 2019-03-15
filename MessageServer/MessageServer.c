@@ -1,16 +1,15 @@
 // MessageServer.cpp : Defines the entry point for the console application.
 //
 
-#include "stdafx.h"
 #include "common.h"
+#include "users.h"
 #include "handle_clients.h"
 
+//TODO: Put this somewhere else
 #define MAX_THREADS 10
 #define MIN_THREADS 1
 
-INT64 gCurrentConnections = 0;
-
-int ReadMaxConnections(TCHAR* String, INT64* MaxConnections)
+int ReadMaxConnections(TCHAR* String, INT* MaxConnections)
 {
     if (NULL == String || NULL == MaxConnections)
     {
@@ -25,7 +24,7 @@ int ReadMaxConnections(TCHAR* String, INT64* MaxConnections)
         }
     }
 
-    *MaxConnections = _tstoi64(String);
+    *MaxConnections = _tstoi(String);
 
     if (*MaxConnections <= 0)
     {
@@ -42,15 +41,16 @@ int _tmain(int argc, TCHAR* argv[])
 
     CM_SERVER* server = NULL;
     CM_SERVER_CLIENT* client = NULL;
-    CM_SERVER_CLIENT_DATA data;
-    CM_DATA_BUFFER* received = NULL;
-    INT64 maxConnections;
+    CM_DATA_BUFFER* received = NULL;   
 
     //Threadpool variables
     PTP_POOL pool = NULL;
     PTP_WORK work = NULL;
     TP_CALLBACK_ENVIRON callBackEnviron;
     PTP_CLEANUP_GROUP cleanupgroup = NULL;
+
+    INT maxConnections;
+    CM_USER_CONNECTION* userConnection = NULL;
 
     if (argc < 2 || ReadMaxConnections(argv[1], &maxConnections) != 0)
     {
@@ -63,6 +63,14 @@ int _tmain(int argc, TCHAR* argv[])
     //DEBUG
     EnableCommunicationModuleLogger();
 
+    error = InitUsersModule(maxConnections);
+    if (CM_IS_ERROR(error))
+    {
+        PrintError(error, TEXT("InitUsersModule"));
+        retVal = -1;
+        goto main_cleanup;
+    }
+
     error = InitCommunicationModule();
     if (CM_IS_ERROR(error))
     {
@@ -70,7 +78,7 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    rollback++;
+    rollback = 1;
     
     error = CreateServer(&server);
     if (CM_IS_ERROR(error))
@@ -79,7 +87,7 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    rollback++;
+    rollback = 2;
 
     error = CreateDataBuffer(&received, MAX_MESSAGE_SIZE);
     if (CM_IS_ERROR(error))
@@ -88,7 +96,7 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    rollback++;
+    rollback = 3;
 
     InitializeThreadpoolEnvironment(&callBackEnviron);
     pool = CreateThreadpool(NULL);
@@ -97,10 +105,10 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    rollback++;
+    rollback = 4;
 
     SetThreadpoolThreadMaximum(pool, MIN_THREADS);
-    if (!SetThreadpoolThreadMinimum(pool, MAX_THREADS))
+    if (!SetThreadpoolThreadMinimum(pool, MAX_THREADS)) //TODO: This is not max
     {
         PrintError(GetLastError(), TEXT("SetThreadpoolThreadMinimum"));
         retVal = -1;
@@ -113,12 +121,11 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    rollback++;
+    rollback = 5;
 
     SetThreadpoolCallbackPool(&callBackEnviron, pool);
     SetThreadpoolCallbackCleanupGroup(&callBackEnviron, cleanupgroup, NULL);
 
-    data.Server = server;
     while (TRUE)
     {
         error = AwaitNewClient(server, &client);
@@ -128,23 +135,24 @@ int _tmain(int argc, TCHAR* argv[])
             retVal = -1;
             goto main_cleanup;
         }
-        rollback = 6;
-        data.Client = client;      
+        rollback = 6;  
 
-        //TODO: set or list
-        data.Accept = gCurrentConnections < maxConnections;
-        if (data.Accept)
+        error = UserConnectionCreate(&userConnection, client);
+        if (CM_IS_ERROR(error))
         {
-            InterlockedIncrement64(&gCurrentConnections);
+            PrintError(error, TEXT("UserConnectionCreate"));
+            retVal = -1;
+            goto main_cleanup;
         }
+        rollback = 7;
 
-        work = CreateThreadpoolWork(ProcessClient, &data, &callBackEnviron);
+        work = CreateThreadpoolWork(ProcessClient, userConnection, &callBackEnviron);
         if (NULL == work) {
             PrintError(error, TEXT("CreateThreadpoolWork"));
             retVal = -1;
             goto main_cleanup;
         }
-        rollback = 7;
+        rollback = 5;
 
         SubmitThreadpoolWork(work);
     }
@@ -152,11 +160,13 @@ int _tmain(int argc, TCHAR* argv[])
 main_cleanup:
     switch (rollback)
     {
-    case 7: //TODO 6,7 not clear
-        CloseThreadpoolCleanupGroupMembers(cleanupgroup, FALSE, NULL);
+    case 7:
+        UserConnectionDestroy(userConnection);
+        client = NULL;
     case 6:
         AbandonClient(client);
     case 5:
+        CloseThreadpoolCleanupGroupMembers(cleanupgroup, TRUE, NULL);
         CloseThreadpoolCleanupGroup(cleanupgroup);
     case 4:
         CloseThreadpool(pool);
