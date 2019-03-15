@@ -63,7 +63,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             case CM_WEAK_PASSWORD:
                 _tprintf_s(TEXT("Error: Password too weak\n"));
                 break;
-            case CM_CREDENTIALS_OK:
+            case CM_VALIDATION_OK:
                 *(password - 1) = '\n';
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + _tcslen(password) + 2) * sizeof(TCHAR), CM_REGISTER);
                 if (CM_IS_ERROR(error))
@@ -249,5 +249,5 @@ CM_VALIDATION Validate(TCHAR * Username, TCHAR * Password)
         return CM_WEAK_PASSWORD;
     }
 
-    return CM_CREDENTIALS_OK;
+    return CM_VALIDATION_OK;
 }

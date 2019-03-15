@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include "handle_clients.h"
 
 VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP_WORK Work)
