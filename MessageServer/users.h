@@ -14,17 +14,19 @@ typedef struct _CM_USER
 {
 	LIST_ENTRY Entry;
 	TCHAR* Username;
+    TCHAR* Password;
 	BOOL IsLoggedIn;
 	CM_USER_CONNECTION* Connection;
 }CM_USER, *PCM_USER;
 
 CM_ERROR InitUsersModule(INT MaxConnections);
+void UninitUsersModule();
 
 //CM_USER functions
-CM_ERROR UserCreate(CM_USER** User, TCHAR* Username);
+CM_ERROR UserCreate(CM_USER** User, TCHAR* Username, TCHAR* Password);
 void UserDestroy(CM_USER* User);
 
-CM_ERROR UserAdd(CM_USER* User);
+CM_ERROR UserAdd(CM_USER* User, BOOL WriteToFile);
 CM_ERROR UserLogIn(CM_USER* User, CM_USER_CONNECTION* UserConnection);
 CM_ERROR UserLogOut(CM_USER* User);
 CM_ERROR UserFind(TCHAR* Username, CM_USER** FoundUser);
@@ -35,10 +37,3 @@ void UserConnectionDestroy(CM_USER_CONNECTION* UserConnection);
 
 CM_ERROR UserConnectionAdd(CM_USER_CONNECTION* UserConnection);
 CM_ERROR UserConnectionRemove(CM_USER_CONNECTION* UserConnection);
-
-//Globals
-extern PLIST_ENTRY gConnections;
-extern PLIST_ENTRY gUsers;
-extern PSRWLOCK gUsersGuard, gConnectionsGuard, gCountGuard;
-extern INT gConnectionsCount, gMaxConnections;
-extern BOOL gIsUsersInitialized;
