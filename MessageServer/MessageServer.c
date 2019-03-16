@@ -58,7 +58,6 @@ int _tmain(int argc, TCHAR* argv[])
         retVal = -1;
         goto main_cleanup;
     }
-    _tprintf_s(TEXT("Success\n"));
 
     //DEBUG
     EnableCommunicationModuleLogger();
@@ -107,8 +106,8 @@ int _tmain(int argc, TCHAR* argv[])
     }
     rollback = 4;
 
-    SetThreadpoolThreadMaximum(pool, MIN_THREADS);
-    if (!SetThreadpoolThreadMinimum(pool, MAX_THREADS)) //TODO: This is not max
+    SetThreadpoolThreadMaximum(pool, maxConnections);
+    if (!SetThreadpoolThreadMinimum(pool, MIN_THREADS)) //TODO: This is not max
     {
         PrintError(GetLastError(), TEXT("SetThreadpoolThreadMinimum"));
         retVal = -1;
@@ -126,6 +125,8 @@ int _tmain(int argc, TCHAR* argv[])
     SetThreadpoolCallbackPool(&callBackEnviron, pool);
     SetThreadpoolCallbackCleanupGroup(&callBackEnviron, cleanupgroup, NULL);
 
+
+    _tprintf_s(TEXT("Success\n"));
     while (TRUE)
     {
         error = AwaitNewClient(server, &client);
@@ -177,6 +178,7 @@ main_cleanup:
     case 1:
         UninitCommunicationModule();
     default:
+        UninitUsersModule();
         break;
     }
 
