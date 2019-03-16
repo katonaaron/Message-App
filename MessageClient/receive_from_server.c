@@ -35,10 +35,66 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
             _tprintf_s(TEXT("%s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_REGISTER:
+            switch (*(CM_VALIDATION*)message->Buffer)
+            {
+            case CM_INVALID_USERNAME:
+                _tprintf_s(TEXT("Error: Invalid username\n"));
+                break;
+            case CM_INVALID_PASSWORD:
+                _tprintf_s(TEXT("Error: Invalid password\n"));
+                break;
+            case CM_WEAK_PASSWORD:
+                _tprintf_s(TEXT("Error: Password too weak\n"));
+                break;
+            case CM_USER_ALREADY_EXISTS:
+                _tprintf_s(TEXT("Error: Username already registered\n"));
+                break;
+            case CM_CLIENT_ALREADY_LOGGED_IN:
+                _tprintf_s(TEXT("Error: User already logged in\n"));
+                break;
+            case CM_VALIDATION_OK:
+                _tprintf_s(TEXT("Success\n"));
+                break;
+            default:
+                PrintErrorMessage(TEXT("Invalid response from server on operation: CM_REGISTER"));
+                break;
+            }
             break;
         case CM_LOGIN:
+            switch (*(CM_VALIDATION*)message->Buffer)
+            {
+
+            case CM_INVALID_PASSWORD:
+            case CM_INVALID_USERNAME:
+                _tprintf_s(TEXT("Error: Invalid username/password combination\n"));
+                break;
+            case CM_CLIENT_ALREADY_LOGGED_IN:
+                _tprintf_s(TEXT("Error: Another user already logged in\n"));
+                break;
+            case CM_USER_ALREADY_LOGGED_IN:
+                _tprintf_s(TEXT("Error: User already logged in\n"));
+                break;
+            case CM_VALIDATION_OK:
+                _tprintf_s(TEXT("Success\n"));
+                break;
+            default:
+                PrintErrorMessage(TEXT("Invalid response from server on operation: CM_LOGIN"));
+                break;
+            }
             break;
         case CM_LOGOUT:
+            switch (*(CM_VALIDATION*)message->Buffer)
+            {
+            case CM_CLIENT_NOT_LOGGED_IN:
+                _tprintf_s(TEXT("Error: No user currently logged in\n"));
+                break;
+            case CM_VALIDATION_OK:
+                _tprintf_s(TEXT("Success\n"));
+                break;
+            default:
+                PrintErrorMessage(TEXT("Invalid response from server on operation: CM_LOGOUT"));
+                break;
+            }
             break;
         case CM_MSG:
             break;
@@ -63,6 +119,7 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
             }
             break;
         default:
+            PrintErrorMessage(TEXT("Invalid operation code from server"));
             break;
         }
         free(message);

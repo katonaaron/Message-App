@@ -1,5 +1,9 @@
 #include "handle_clients.h"
 
+static int Register(CM_SERVER_CLIENT* Client, TCHAR* Username, TCHAR* Password, CM_USER** User);
+static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Password, CM_USER** User);
+static int Logout(CM_SERVER_CLIENT* Client, CM_USER* User);
+
 VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP_WORK Work)
 {
     UNREFERENCED_PARAMETER(Instance);
@@ -11,6 +15,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
     CM_USER_CONNECTION* userConnection = (CM_USER_CONNECTION*)Parameter;
     CM_SERVER_CLIENT* client = userConnection->Client;
     CM_MESSAGE* message = NULL;
+    CM_USER* user = NULL;
 
     error = SendMessageToClient(client, &userConnection->ServerAccepted, sizeof(BOOL), CM_CONNECT);
     if (CM_IS_ERROR(error))
@@ -61,14 +66,9 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             TCHAR *username, *password, *next_token = NULL;
             username = _tcstok_s((TCHAR*)message->Buffer, TEXT(" \n"), &next_token);
             password = _tcstok_s(NULL, TEXT("\n"), &next_token);
-            if (NULL == username || NULL == password)
-            {
-                PrintErrorMessage(TEXT("Invalid register credentials"));
-            }
-            else
-            {
-                _tprintf_s(TEXT("username: %s, password: %s\n"), username, password);
-            }
+
+            if (Register(client, username, password, &user))
+                goto process_client_cleanup;
             break;
         }
         case CM_LOGIN:
@@ -76,18 +76,14 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             TCHAR *username, *password, *next_token = NULL;
             username = _tcstok_s((TCHAR*)message->Buffer, TEXT(" \n"), &next_token);
             password = _tcstok_s(NULL, TEXT("\n"), &next_token);
-            if (NULL == username || NULL == password)
-            {
-                PrintErrorMessage(TEXT("Invalid login credentials"));
-            }
-            else
-            {
-                _tprintf_s(TEXT("username: %s, password: %s\n"), username, password);
-            }
+           
+            if (Login(userConnection, username, password, &user))
+                goto process_client_cleanup;
             break;
         }
         case CM_LOGOUT:
-            _tprintf_s(TEXT("logout\n"));
+            if(Logout(client, user))
+                goto process_client_cleanup;
             break;
         case CM_MSG:
         {
@@ -152,9 +148,185 @@ process_client_cleanup:
             PrintError(error, TEXT("UserConnectionRemove"));
         }
     default:
+        if (user)
+        {
+            error = UserLogOut(user);
+            if (CM_IS_ERROR(error))
+            {
+                PrintError(error, TEXT("UserConnectionRemove"));
+            }
+        }
         UserConnectionDestroy(userConnection);
         free(message);
         break;
     }
     return;
+}
+
+static int Register(CM_SERVER_CLIENT* Client, TCHAR* Username, TCHAR* Password, CM_USER** User)
+{
+    if (NULL == Client || NULL == User)
+    {
+        PrintError(CM_INVALID_PARAMETER, TEXT("Register"));
+        return -1;
+    }
+
+    CM_ERROR error = CM_SUCCESS;
+    UINT response = CM_VALIDATION_OK;
+    CM_USER* user = NULL, *foundUser = NULL;
+
+    if (*User != NULL && (*User)->IsLoggedIn)
+    {
+        response = CM_CLIENT_ALREADY_LOGGED_IN;
+    }
+
+    if (!response)
+    {
+        response = ValidateUsernamePassword(Username, Password);
+    }
+
+
+    if (!response)
+    {
+        error = UserFind(Username, &foundUser);
+        if (error != CM_NOT_FOUND)
+        {
+            if (CM_IS_ERROR(error))
+            {
+                PrintError(error, TEXT("UserFind"));
+                return -1;
+            }
+            response = CM_USER_ALREADY_EXISTS;
+        }
+    }
+
+    if (!response)
+    {
+        error = UserCreate(&user, Username, Password);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("UserCreate"));
+            return -1;
+        }
+
+        error = UserAdd(user, TRUE);
+        if (CM_IS_ERROR(error))
+        {
+            UserDestroy(user);
+            PrintError(error, TEXT("UserAdd"));
+            return -1;
+        }
+
+        *User = user;
+    }
+
+    error = SendMessageToClient(Client, &response, sizeof(UINT), CM_REGISTER);
+    if (CM_IS_ERROR(error))
+    {
+        PrintError(error, TEXT("SendMessageToClient"));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Password, CM_USER** User)
+{
+    if (NULL == UserConnection || NULL == User)
+    {
+        PrintError(CM_INVALID_PARAMETER, TEXT("Login"));
+        return -1;
+    }
+
+    CM_ERROR error = CM_SUCCESS;
+    UINT response = CM_VALIDATION_OK;
+    CM_USER *foundUser = NULL;
+
+    if (*User != NULL && (*User)->IsLoggedIn)
+    {
+        response = CM_CLIENT_ALREADY_LOGGED_IN;
+    }
+
+    if (!response && (NULL == Username || NULL == Password))
+    {
+        response = CM_INVALID_USERNAME;
+    }
+
+    if (!response)
+    {
+        error = UserFind(Username, &foundUser);
+        if (error == CM_NOT_FOUND)
+        {
+            response = CM_INVALID_USERNAME;
+        }
+        if (CM_IS_ERROR(error) && NULL == foundUser)
+        {
+            PrintError(error, TEXT("UserFind"));
+            return -1;
+        }
+    }
+
+    if (!response && foundUser->IsLoggedIn)
+    {
+        response = CM_USER_ALREADY_LOGGED_IN;
+    }
+
+    if (!response && _tcscmp(foundUser->Password, Password))
+    {
+        response = CM_INVALID_PASSWORD;
+    }
+
+    if (!response)
+    {
+        error = UserLogIn(foundUser, UserConnection);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("UserLogIn"));
+            return -1;
+        }
+        *User = foundUser;
+    }
+
+    error = SendMessageToClient(UserConnection->Client, &response, sizeof(UINT), CM_LOGIN);
+    if (CM_IS_ERROR(error))
+    {
+        PrintError(error, TEXT("SendMessageToClient"));
+        return -1;
+    }
+
+    return 0;
+}
+
+static int Logout(CM_SERVER_CLIENT * Client, CM_USER * User)
+{
+    if (NULL == Client)
+    {
+        PrintError(CM_INVALID_PARAMETER, TEXT("Login"));
+        return -1;
+    }
+
+    CM_VALIDATION response = CM_VALIDATION_OK;
+    CM_ERROR error;
+
+    if (NULL == User || !User->IsLoggedIn)
+    {
+        response = CM_CLIENT_NOT_LOGGED_IN;
+    }
+    else
+    {
+        error = UserLogOut(User);
+        if (CM_IS_ERROR(error))
+        {
+            PrintError(error, TEXT("UserLogOut"));
+            return -1;
+        }
+    }
+
+    error = SendMessageToClient(Client, &response, sizeof(CM_VALIDATION), CM_LOGOUT);
+    if (CM_IS_ERROR(error))
+    {
+        PrintError(error, TEXT("SendMessageToClient"));
+        return -1;
+    }
+    return 0;
 }
