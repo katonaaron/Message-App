@@ -30,12 +30,18 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="common_validation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common_error.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="common_message.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="common_validation.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
