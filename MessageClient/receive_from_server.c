@@ -97,6 +97,21 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
             }
             break;
         case CM_MSG:
+            switch (*(CM_VALIDATION*)message->Buffer)
+            {
+            case CM_INVALID_USERNAME:
+                _tprintf_s(TEXT("Error: No such user\n"));
+                break;
+            case CM_CLIENT_NOT_LOGGED_IN:
+                _tprintf_s(TEXT("Error: No user currently logged in\n"));
+                break;
+            case CM_VALIDATION_OK:
+                _tprintf_s(TEXT("Success\n"));
+                break;
+            default:
+                PrintErrorMessage(TEXT("Invalid response from server on operation: CM_MSG"));
+                break;
+            }
             break;
         case CM_BROADCAST:
             break;
@@ -118,6 +133,15 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
                 goto receive_from_server_cleanup;
             }
             break;
+        case CM_MSG_TEXT:
+        {
+            size_t length = (message->Size / sizeof(TCHAR));
+            TCHAR* buffer = (TCHAR*)message->Buffer;
+            TCHAR last = buffer[length - 1];
+            buffer[length - 1] = 0;
+            _tprintf_s(TEXT("Message%*s%c"), (int)length, buffer, last);
+        }
+        break;
         default:
             PrintErrorMessage(TEXT("Invalid operation code from server"));
             break;

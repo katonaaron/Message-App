@@ -8,6 +8,10 @@ INT gConnectionsCount, gMaxConnections;
 BOOL gIsUsersInitialized = FALSE;
 HANDLE gRegistrationFile;
 
+static void UserFileInit(CM_USER_FILE* UserFile);
+static CM_ERROR WriteMessageToFile(CM_USER_FILE * UserFile, TCHAR * Username, BOOL UpdateFilePointer, TCHAR* Message, CM_SIZE MessageSize);
+static CM_ERROR OpenHistoryFile(HANDLE* File, TCHAR* Username);
+
 static CM_ERROR ReadUsersFromFile()
 {
     LARGE_INTEGER fileSize;
@@ -111,9 +115,17 @@ CM_ERROR InitUsersModule(INT MaxConnections)
         OPEN_ALWAYS,
         FILE_ATTRIBUTE_NORMAL,
         NULL
-    );    
+    );
     if (INVALID_HANDLE_VALUE == gRegistrationFile)
         return GetLastError();
+
+    if (CreateDirectory(TEXT("history"), NULL))
+    {
+        DWORD error = GetLastError();
+        if (error != ERROR_ALREADY_EXISTS)
+            return error;
+    }
+
     return ReadUsersFromFile();
 }
 
@@ -123,7 +135,7 @@ void UninitUsersModule()
     {
         gIsUsersInitialized = FALSE; //TODO: Sync threads
         CloseHandle(gRegistrationFile);
-        gRegistrationFile = NULL;        
+        gRegistrationFile = NULL;
 
         CM_USER* user;
         while (gUsers->Flink != gUsers)
@@ -180,6 +192,8 @@ CM_ERROR UserCreate(CM_USER ** User, TCHAR * Username, TCHAR * Password)
         return CM_NO_MEMORY;
     }
     _tcscpy_s(user->Password, length, Password);
+
+    UserFileInit(&user->File);
 
     *User = user;
     return CM_SUCCESS;
@@ -245,6 +259,7 @@ CM_ERROR UserLogIn(CM_USER * User, CM_USER_CONNECTION * UserConnection)
     User->Connection = UserConnection;
     User->IsLoggedIn = TRUE;
     ReleaseSRWLockExclusive(gUsersGuard);
+
     return CM_SUCCESS;
 }
 
@@ -259,6 +274,20 @@ CM_ERROR UserLogOut(CM_USER * User)
     User->Connection = NULL;
     User->IsLoggedIn = FALSE;
     ReleaseSRWLockExclusive(gUsersGuard);
+
+    return CM_SUCCESS;
+}
+
+CM_ERROR UserIsLoggedIn(CM_USER * User, BOOL * IsLoggedIn)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == User || NULL == IsLoggedIn)
+        return CM_INVALID_PARAMETER;
+
+    AcquireSRWLockShared(gUsersGuard);
+    *IsLoggedIn = User->IsLoggedIn;
+    ReleaseSRWLockShared(gUsersGuard);
 
     return CM_SUCCESS;
 }
@@ -293,6 +322,73 @@ CM_ERROR UserFind(TCHAR* Username, CM_USER** FoundUser)
 
     *FoundUser = user;
     return CM_SUCCESS;
+}
+
+CM_ERROR UserSendMessage(CM_USER* Sender, CM_USER* Receiver, TCHAR* Message)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == Sender || NULL == Receiver || NULL == Message)
+        return CM_INVALID_PARAMETER;
+
+    CM_ERROR result = CM_SUCCESS;
+    DWORD rollback = 0;
+
+    size_t lineLength = _tcslen(Sender->Username) + _tcslen(Message) + 9;
+    CM_SIZE lineSize = (CM_SIZE)GET_STRING_SIZE(lineLength);
+    TCHAR* line = (TCHAR*)malloc(lineSize);
+
+    if (NULL == line)
+    {
+        result = CM_NO_MEMORY;
+        goto cleanup;
+    }
+    rollback = 1;
+
+    if (lineLength - 1 != _sntprintf(line, lineLength, TEXT("from %s: %s\n"), Sender->Username, Message))
+    {
+        result = CM_STRING_MANIPULATION_FAILED;
+        goto cleanup;
+    }
+
+    AcquireSRWLockShared(gUsersGuard);
+    AcquireSRWLockExclusive(&Sender->File.FileGuard);
+
+    result = WriteMessageToFile(&Sender->File, Sender->Username, TRUE, line, lineSize);
+
+    ReleaseSRWLockExclusive(&Sender->File.FileGuard);
+    ReleaseSRWLockShared(gUsersGuard);
+    if (result)
+        goto cleanup;
+
+    AcquireSRWLockShared(gUsersGuard);
+    AcquireSRWLockExclusive(&Receiver->File.FileGuard);
+    rollback = 2;
+
+    if (Receiver->Connection != NULL && Receiver->IsLoggedIn)
+    {
+        result = SendMessageToClient(Receiver->Connection->Client, line, (CM_SIZE)lineSize, CM_MSG_TEXT);
+        if (result)
+            goto cleanup;
+        result = WriteMessageToFile(&Receiver->File, Receiver->Username, TRUE, line, lineSize);
+    }
+    else
+    {
+        result = WriteMessageToFile(&Receiver->File, Receiver->Username, FALSE, line, lineSize);
+    }
+
+cleanup:
+    switch (rollback)
+    {
+    case 2:
+        ReleaseSRWLockExclusive(&Receiver->File.FileGuard);
+        ReleaseSRWLockShared(gUsersGuard);
+    case 1:
+        free(line);
+    default:
+        break;
+    }
+    return result;
 }
 
 CM_ERROR UserConnectionCreate(CM_USER_CONNECTION** UserConnection, CM_SERVER_CLIENT* Client)
@@ -365,5 +461,213 @@ CM_ERROR UserConnectionRemove(CM_USER_CONNECTION * UserConnection)
     AcquireSRWLockExclusive(gConnectionsGuard);
     RemoveEntryList(&UserConnection->Entry);
     ReleaseSRWLockExclusive(gConnectionsGuard);
+    return CM_SUCCESS;
+}
+
+void UserFileInit(CM_USER_FILE * UserFile)
+{
+    InitializeSRWLock(&UserFile->FileGuard);
+    UserFile->FilePointer.HighPart = 0;
+    UserFile->FilePointer.LowPart = 0;
+    UserFile->File = NULL;
+}
+
+static CM_ERROR WriteMessageToFile(CM_USER_FILE * UserFile, TCHAR * Username, BOOL UpdateFilePointer, TCHAR* Message, CM_SIZE MessageSize)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == UserFile || NULL == Message || 0 == MessageSize)
+        return CM_INVALID_PARAMETER;
+
+    if (UserFile->File == NULL)
+    {
+        CM_ERROR result = OpenHistoryFile(&UserFile->File, Username);
+        if (result)
+            return result;
+
+        DWORD res = SetFilePointer(UserFile->File, 0, NULL, FILE_END);
+        if (INVALID_SET_FILE_POINTER == res)
+            return INVALID_SET_FILE_POINTER;
+    }
+
+    BOOL result = WriteFile(
+        UserFile->File,
+        Message,
+        MessageSize - sizeof(TCHAR),
+        NULL,
+        NULL
+    );
+    if (!result)
+        return GetLastError();
+
+    if (UpdateFilePointer)
+    {
+        LARGE_INTEGER zero = { 0 };
+        result = SetFilePointerEx(
+            UserFile->File,
+            zero,
+            &UserFile->FilePointer,
+            FILE_CURRENT
+        );
+        if (!result)
+            return GetLastError();
+    }
+
+    return CM_SUCCESS;
+}
+
+CM_ERROR UserReceiveOfflineMessages(CM_USER * User)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == User)
+        return CM_INVALID_PARAMETER;
+
+    DWORD rollback = 0;
+    CM_ERROR result = CM_SUCCESS;
+
+    LARGE_INTEGER fileSize;
+    TCHAR* buffer = NULL;
+    HANDLE fileMapping = NULL;
+
+    AcquireSRWLockShared(gUsersGuard);
+    rollback = 1;
+
+    AcquireSRWLockExclusive(&User->File.FileGuard);
+    rollback = 2;
+
+    if (User->File.File == NULL)
+    {
+        result = OpenHistoryFile(&User->File.File, User->Username);
+        if (result)
+            goto cleanup;
+    }
+    ReleaseSRWLockExclusive(&User->File.FileGuard);
+    rollback = 1;
+
+    //AcquireSRWLockShared(&User->File.FileGuard);
+    ReleaseSRWLockExclusive(&User->File.FileGuard);
+    rollback = 3;
+
+    if (GetFileSizeEx(User->File.File, &fileSize) == 0)
+    {
+        result = GetLastError();
+        goto cleanup;
+    }
+    if (fileSize.QuadPart == 0)
+        goto cleanup;
+
+    fileMapping = CreateFileMapping(
+        User->File.File,
+        NULL,
+        PAGE_READONLY,
+        0,
+        0,
+        NULL
+    );
+    if (NULL == fileMapping)
+    {
+        result = GetLastError();
+        goto cleanup;
+    }
+    rollback = 4;
+
+    buffer = MapViewOfFile(
+        fileMapping,
+        FILE_MAP_READ,
+        0,
+        0,
+        0
+    );
+    if (NULL == buffer)
+    {
+        result = GetLastError();
+        goto cleanup;
+    }
+    rollback = 5;
+
+    buffer += User->File.FilePointer.QuadPart / sizeof(TCHAR);
+    TCHAR* next = buffer, *prev = buffer;
+
+    while ((next = _tcsstr(prev, TEXT("\n"))) != NULL)
+    {
+        result = SendMessageToClient(User->Connection->Client, prev, (CM_SIZE)GET_STRING_SIZE(next - prev + 1), CM_MSG_TEXT);
+        if (result)
+            goto cleanup;
+        for (int i = 0; i < next - prev + 1; i++)
+        {
+            _tprintf_s(TEXT("%c"), prev[i]);
+        }
+        prev = next + 1;
+    }
+
+    LARGE_INTEGER zero = { 0 };
+    BOOL ok = SetFilePointerEx(
+        User->File.File,
+        zero,
+        &User->File.FilePointer,
+        FILE_END
+    );
+    if (!ok)
+    {
+        result = GetLastError();
+        goto cleanup;
+    }
+
+cleanup:
+    switch (rollback)
+    {
+    case 5:
+        if (!UnmapViewOfFile(buffer))
+            result = GetLastError();
+    case 4:
+        if (!CloseHandle(fileMapping))
+            result = GetLastError();
+    case 3:
+        /*ReleaseSRWLockShared(&User->File.FileGuard);
+        rollback = 1;
+        goto cleanup;*/
+    case 2:
+        ReleaseSRWLockExclusive(&User->File.FileGuard);
+    case 1:
+        ReleaseSRWLockShared(gUsersGuard);
+    default:
+        break;
+    }
+    return result;
+}
+
+CM_ERROR OpenHistoryFile(HANDLE * File, TCHAR * Username)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == File || NULL == Username)
+        return CM_INVALID_PARAMETER;
+
+    *File = NULL;
+    TCHAR* folder = TEXT("history\\"), *extension = TEXT(".txt");
+    size_t length = _tcslen(Username) + 8 + 4 + 1;
+    CM_SIZE messageSize = (CM_SIZE)GET_STRING_SIZE(length);
+
+    TCHAR* pathToFile = (TCHAR*)malloc(messageSize);
+    if (NULL == pathToFile)
+        return CM_NO_MEMORY;
+    if (length - 1 != _sntprintf(pathToFile, length, TEXT("%s%s%s"), folder, Username, extension))
+        return CM_STRING_MANIPULATION_FAILED;
+
+    HANDLE file = CreateFile(
+        pathToFile,
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ,//0,
+        NULL,
+        OPEN_ALWAYS,
+        FILE_ATTRIBUTE_NORMAL,
+        NULL
+    );
+
+    free(pathToFile);
+    if (INVALID_HANDLE_VALUE == file)
+        return GetLastError();
+    *File = file;
     return CM_SUCCESS;
 }
