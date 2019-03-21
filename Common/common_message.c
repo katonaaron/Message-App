@@ -245,7 +245,6 @@ CM_ERROR ReceiveMessageFromServer(CM_CLIENT * Client, CM_MESSAGE ** Message)
         result = CM_NO_MEMORY;
         goto cleanup;
     }
-    rollback = 2;
     memcpy(message, dataBuffer->DataBuffer, dataBuffer->UsedBufferSize);
     *Message = message;
 
