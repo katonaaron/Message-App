@@ -40,7 +40,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
                 error = SendMessageToServer(Client, word, (CM_SIZE)(_tcslen(word) + 1) * sizeof(TCHAR), CM_ECHO);
             }
 
-            if (CM_IS_ERROR(error))
+            if (error)
             {
                 PrintError(error, TEXT("SendMessageToServer"));
                 return;
@@ -66,7 +66,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             case CM_VALIDATION_OK:
                 *(password - 1) = '\n';
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + _tcslen(password) + 2) * sizeof(TCHAR), CM_REGISTER);
-                if (CM_IS_ERROR(error))
+                if (error)
                 {
                     PrintError(error, TEXT("SendMessageToServer"));
                     return;
@@ -89,7 +89,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             {
                 *(password - 1) = '\n';
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + _tcslen(password) + 2) * sizeof(TCHAR), CM_LOGIN);
-                if (CM_IS_ERROR(error))
+                if (error)
                 {
                     PrintError(error, TEXT("SendMessageToServer"));
                     return;
@@ -99,7 +99,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
         else if (_tcscmp(word, TEXT("logout")) == 0)
         {
             error = SendMessageToServer(Client, NULL, 0, CM_LOGOUT);
-            if (CM_IS_ERROR(error))
+            if (error)
             {
                 PrintError(error, TEXT("SendMessageToServer"));
                 return;
@@ -119,7 +119,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             {
                 *(text - 1) = '\n';
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + _tcslen(text) + 2) * sizeof(TCHAR), CM_MSG);
-                if (CM_IS_ERROR(error))
+                if (error)
                 {
                     PrintError(error, TEXT("SendMessageToServer"));
                     return;
@@ -129,7 +129,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
         else if (_tcscmp(word, TEXT("broadcast")) == 0)
         {
             error = SendMessageToServer(Client, next_token, (CM_SIZE)(_tcslen(next_token) + 1) * sizeof(TCHAR), CM_BROADCAST);
-            if (CM_IS_ERROR(error))
+            if (error)
             {
                 PrintError(error, TEXT("SendMessageToServer"));
                 return;
@@ -152,7 +152,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             else
             {
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + 1) * sizeof(TCHAR), CM_SENDFILE);
-                if (CM_IS_ERROR(error))
+                if (error)
                 {
                     PrintError(error, TEXT("SendMessageToServer"));
                     return;
@@ -162,7 +162,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
         else if (_tcscmp(word, TEXT("list")) == 0)
         {
             error = SendMessageToServer(Client, NULL, 0, CM_LIST);
-            if (CM_IS_ERROR(error))
+            if (error)
             {
                 PrintError(error, TEXT("SendMessageToServer"));
                 return;
@@ -186,7 +186,7 @@ void ReadCommands(CM_CLIENT* Client, HANDLE* ReceiverThread)
             {
                 *(count - 1) = '\n';
                 error = SendMessageToServer(Client, username, (CM_SIZE)(_tcslen(username) + _tcslen(count) + 2) * sizeof(TCHAR), CM_HISTORY);
-                if (CM_IS_ERROR(error))
+                if (error)
                 {
                     PrintError(error, TEXT("SendMessageToServer"));
                     return;

@@ -20,7 +20,7 @@ int _tmain(int argc, TCHAR* argv[])
     HANDLE receiverThread = NULL;
 
     error = InitCommunicationModule();
-    if (CM_IS_ERROR(error))
+    if (error)
     {
 
         PrintError(error, TEXT("InitCommunicationModule"));
@@ -40,7 +40,7 @@ int _tmain(int argc, TCHAR* argv[])
 
 
     error = CreateClientConnectionToServer(&connection.Client);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         _tprintf_s(TEXT("Error: no running server found\n"));
         retVal = 0;
@@ -102,7 +102,7 @@ main_cleanup:
             goto main_cleanup;
         }
         error = SendMessageToServer(connection.Client, "", 0, CM_EXIT);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             PrintError(error, TEXT("SendMessageToServer"));
         }
