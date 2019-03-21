@@ -13,7 +13,8 @@ typedef enum _CM_OP_CODE {
     CM_LIST,
     CM_HISTORY,
     CM_CONNECT,
-    CM_EXIT
+    CM_EXIT,
+    CM_MSG_TEXT
 } CM_OP_CODE;
 
 typedef struct _CM_MESSAGE

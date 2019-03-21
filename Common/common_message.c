@@ -86,14 +86,14 @@ CM_ERROR SendMessageToServer(CM_CLIENT * Client, void * Message, CM_SIZE Message
     CM_ERROR error = CM_SUCCESS;
 
     error = CreateMessage(MessageSize, Operation, &message);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         goto send_message_to_server_cleanup;
     }
     rollback = 1;
 
     error = CreateDataBuffer(&dataBuffer, GET_MESSAGE_SIZE(message->Size));
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         goto send_message_to_server_cleanup;
     }
@@ -113,14 +113,14 @@ CM_ERROR SendMessageToServer(CM_CLIENT * Client, void * Message, CM_SIZE Message
         memcpy(message->Buffer, (BYTE*)Message + i * MAX_MESSAGE_BUFFER_SIZE, message->Size);
 
         error = CopyDataIntoBuffer(dataBuffer, (const CM_BYTE*)message, GET_MESSAGE_SIZE(message->Size));
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto send_message_to_server_cleanup;
         }
 
 
         error = SendDataToServer(Client, dataBuffer, &sendByteCount);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto send_message_to_server_cleanup;
         }
@@ -156,14 +156,14 @@ CM_ERROR SendMessageToClient(CM_SERVER_CLIENT * Client, void * Message, CM_SIZE 
     CM_ERROR error = CM_SUCCESS;
 
     error = CreateMessage(MessageSize, Operation, &message);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         goto send_message_to_client_cleanup;
     }
     rollback = 1;
 
-    error = CreateDataBuffer(&dataBuffer, GET_MESSAGE_SIZE(message->Size));
-    if (CM_IS_ERROR(error))
+    error = CreateDataBuffer(&dataBuffer, MAX_MESSAGE_BUFFER_SIZE);
+    if (error)
     {
         goto send_message_to_client_cleanup;
     }
@@ -183,13 +183,13 @@ CM_ERROR SendMessageToClient(CM_SERVER_CLIENT * Client, void * Message, CM_SIZE 
         memcpy(message->Buffer, (BYTE*)Message + i * MAX_MESSAGE_BUFFER_SIZE, message->Size);
 
         error = CopyDataIntoBuffer(dataBuffer, (const CM_BYTE*)message, GET_MESSAGE_SIZE(message->Size));
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto send_message_to_client_cleanup;
         }
 
         error = SendDataToClient(Client, dataBuffer, &sendByteCount);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto send_message_to_client_cleanup;
         }
@@ -218,53 +218,46 @@ CM_ERROR ReceiveMessageFromServer(CM_CLIENT * Client, CM_MESSAGE ** Message)
     }
 
     INT rollback = 0;
-    CM_MESSAGE* message = NULL, *receivedMessage = NULL;
+    CM_MESSAGE *receivedMessage = NULL;
 
     CM_DATA_BUFFER* dataBuffer = NULL;
     CM_SIZE receivedByteCount = 0;
-    CM_ERROR error = CM_SUCCESS;
+    CM_ERROR result = CM_SUCCESS;
 
-    error = CreateDataBuffer(&dataBuffer, MAX_MESSAGE_SIZE);
-    if (CM_IS_ERROR(error))
+    *Message = NULL;
+
+    result = CreateDataBuffer(&dataBuffer, MAX_MESSAGE_SIZE);
+    if (result)
     {
-        goto receive_message_from_server_cleanup;
+        goto cleanup;
     }
     rollback = 1;
 
-    DWORD i = 0;
-    do
+    result = ReceiveDataFormServer(Client, dataBuffer, &receivedByteCount);
+    if (result)
     {
-        error = ReceiveDataFormServer(Client, dataBuffer, &receivedByteCount);
-        if (CM_IS_ERROR(error))
-        {
-            goto receive_message_from_server_cleanup;
-        }
-
-        receivedMessage = (CM_MESSAGE*)dataBuffer->DataBuffer;
-        error = CopyMessage(receivedMessage, i * MAX_MESSAGE_BUFFER_SIZE, &message);
-        if (CM_IS_ERROR(error))
-        {
-            goto receive_message_from_server_cleanup;
-        }
-        rollback = 2;
-
-    } while (++i < receivedMessage->Parts);
-    rollback = 1;
+        goto cleanup;
+    }
     
+    CM_MESSAGE* message = (CM_MESSAGE*)malloc(dataBuffer->UsedBufferSize);
+    if (NULL == message)
+    {
+        result = CM_NO_MEMORY;
+        goto cleanup;
+    }
+    rollback = 2;
+    memcpy(message, dataBuffer->DataBuffer, dataBuffer->UsedBufferSize);
     *Message = message;
 
-receive_message_from_server_cleanup:
+cleanup:
     switch (rollback)
     {
-    case 2:
-        free(message);
-        *Message = NULL;
     case 1:
         DestroyDataBuffer(dataBuffer);
     default:
         break;
     }
-    return error;
+    return result;
 }
 
 CM_ERROR ReceiveMessageFromClient(CM_SERVER_CLIENT * Client, CM_MESSAGE ** Message)
@@ -282,7 +275,7 @@ CM_ERROR ReceiveMessageFromClient(CM_SERVER_CLIENT * Client, CM_MESSAGE ** Messa
     CM_ERROR error = CM_SUCCESS;
 
     error = CreateDataBuffer(&dataBuffer, MAX_MESSAGE_SIZE);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         goto receive_message_from_client_cleanup;
     }
@@ -292,14 +285,14 @@ CM_ERROR ReceiveMessageFromClient(CM_SERVER_CLIENT * Client, CM_MESSAGE ** Messa
     do
     {
         error = ReceiveDataFromClient(Client, dataBuffer, &receivedByteCount);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto receive_message_from_client_cleanup;
         }
 
         receivedMessage = (CM_MESSAGE*)dataBuffer->DataBuffer;
         error = CopyMessage(receivedMessage, i * MAX_MESSAGE_BUFFER_SIZE, &message);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             goto receive_message_from_client_cleanup;
         }
