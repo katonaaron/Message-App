@@ -22,7 +22,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
     if (error)
     {
         PrintError(error, TEXT("SendMessageToClient"));
-        goto process_client_cleanup;
+        goto cleanup;
     }
 
     if (userConnection->ServerAccepted)
@@ -31,12 +31,12 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
         if (error)
         {
             PrintError(error, TEXT("UserConnectionAdd"));
-            goto process_client_cleanup;
+            goto cleanup;
         }
     }
     else
     {
-        goto process_client_cleanup;
+        goto cleanup;
     }
     rollback = 1;
 
@@ -48,7 +48,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
         if (error)
         {
             PrintError(error, TEXT("ReceiveMessageFromClient"));
-            goto process_client_cleanup;
+            goto cleanup;
         }
 
         switch (message->Operation)
@@ -59,7 +59,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             if (error)
             {
                 PrintError(error, TEXT("SendMessageToClient"));
-                goto process_client_cleanup;
+                goto cleanup;
             }
             break;
         case CM_REGISTER:
@@ -69,7 +69,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             password = _tcstok_s(NULL, TEXT("\n"), &next_token);
 
             if (Register(client, username, password, &user))
-                goto process_client_cleanup;
+                goto cleanup;
             break;
         }
         case CM_LOGIN:
@@ -79,12 +79,12 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             password = _tcstok_s(NULL, TEXT("\n"), &next_token);
 
             if (Login(userConnection, username, password, &user))
-                goto process_client_cleanup;
+                goto cleanup;
             break;
         }
         case CM_LOGOUT:
             if (Logout(client, user))
-                goto process_client_cleanup;
+                goto cleanup;
             break;
         case CM_MSG:
         {
@@ -93,7 +93,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             text = _tcstok_s(NULL, TEXT("\n"), &next_token);
 
             if (Message(user, client, username, text))
-                goto process_client_cleanup;
+                goto cleanup;
             break;
         }
         case CM_BROADCAST:
@@ -103,8 +103,15 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             _tprintf_s(TEXT("file will be sent to: %s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_LIST:
-            _tprintf_s(TEXT("list\n"));
-            break;
+        {
+            CM_ERROR result = UserConnectionListOnlineUsers(userConnection);
+            if (result)
+            {
+                PrintError(result, TEXT("UserConnectionListOnlineUsers"));
+                goto cleanup;
+            }
+        }
+        break;
         case CM_HISTORY:
         {
             TCHAR *username, *count, *next_token = NULL;
@@ -134,7 +141,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
         message = NULL;
     }
 
-process_client_cleanup:
+cleanup:
     switch (rollback)
     {
     case 1:
@@ -250,7 +257,7 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
     CM_VALIDATION response = CM_VALIDATION_OK;
     CM_USER *foundUser = NULL;
     BOOL isLoggedIn;
-    printf("start\n");
+    
     if (*User != NULL)
     {
         error = UserIsLoggedIn(*User, &isLoggedIn);
@@ -268,7 +275,7 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
 
     if (!response && (NULL == Username || NULL == Password))
     {
-        response = CM_INVALID_USERNAME; printf("invalid username or password\n");
+        response = CM_INVALID_USERNAME; 
     }
 
     if (!response)
@@ -276,7 +283,7 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
         error = UserFind(Username, &foundUser);
         if (error == CM_NOT_FOUND)
         {
-            response = CM_INVALID_USERNAME; printf("not found\n");
+            response = CM_INVALID_USERNAME;
         }
         else if (error || NULL == foundUser)
         {
@@ -287,12 +294,12 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
 
     if (!response && foundUser->IsLoggedIn)
     {
-        response = CM_USER_ALREADY_LOGGED_IN; printf("ALREADY_LOGGED_IN\n");
+        response = CM_USER_ALREADY_LOGGED_IN;
     }
 
     if (!response && _tcscmp(foundUser->Password, Password))
     {
-        response = CM_INVALID_PASSWORD; printf("password\n");
+        response = CM_INVALID_PASSWORD;
     }
 
     if (!response)
@@ -303,7 +310,7 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
             PrintError(error, TEXT("UserLogIn"));
             return -1;
         }
-        *User = foundUser; printf("logged in\n");
+        *User = foundUser;
     }
 
     error = SendMessageToClient(UserConnection->Client, &response, sizeof(CM_VALIDATION), CM_LOGIN);
@@ -313,16 +320,16 @@ static int Login(CM_USER_CONNECTION* UserConnection, TCHAR* Username, TCHAR* Pas
         return -1;
     }
 
-   if (!response)
+    if (!response)
     {
         error = UserReceiveOfflineMessages(*User);
         if (error)
         {
             PrintError(error, TEXT("UserReceiveOfflineMessages"));
             return -1;
-        }printf("offline messages sent\n");
+        }
     }
-    
+
     return 0;
 }
 
