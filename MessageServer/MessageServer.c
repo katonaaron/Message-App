@@ -63,7 +63,7 @@ int _tmain(int argc, TCHAR* argv[])
     EnableCommunicationModuleLogger();
 
     error = InitUsersModule(maxConnections);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         PrintError(error, TEXT("InitUsersModule"));
         retVal = -1;
@@ -71,7 +71,7 @@ int _tmain(int argc, TCHAR* argv[])
     }
 
     error = InitCommunicationModule();
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         PrintError(error, TEXT("InitCommunicationModule"));
         retVal = -1;
@@ -80,7 +80,7 @@ int _tmain(int argc, TCHAR* argv[])
     rollback = 1;
     
     error = CreateServer(&server);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         PrintError(error, TEXT("CreateServer"));
         retVal = -1;
@@ -89,7 +89,7 @@ int _tmain(int argc, TCHAR* argv[])
     rollback = 2;
 
     error = CreateDataBuffer(&received, MAX_MESSAGE_SIZE);
-    if (CM_IS_ERROR(error))
+    if (error)
     {
         PrintError(error, TEXT("CreateDataBuffer"));
         retVal = -1;
@@ -106,7 +106,7 @@ int _tmain(int argc, TCHAR* argv[])
     }
     rollback = 4;
 
-    SetThreadpoolThreadMaximum(pool, maxConnections);
+    SetThreadpoolThreadMaximum(pool, maxConnections + 2);
     if (!SetThreadpoolThreadMinimum(pool, MIN_THREADS)) //TODO: This is not max
     {
         PrintError(GetLastError(), TEXT("SetThreadpoolThreadMinimum"));
@@ -130,7 +130,7 @@ int _tmain(int argc, TCHAR* argv[])
     while (TRUE)
     {
         error = AwaitNewClient(server, &client);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             PrintError(error, TEXT("AwaitNewClient"));
             retVal = -1;
@@ -139,7 +139,7 @@ int _tmain(int argc, TCHAR* argv[])
         rollback = 6;  
 
         error = UserConnectionCreate(&userConnection, client);
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             PrintError(error, TEXT("UserConnectionCreate"));
             retVal = -1;
