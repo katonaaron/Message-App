@@ -49,3 +49,5 @@ void UserConnectionDestroy(CM_USER_CONNECTION* UserConnection);
 
 CM_ERROR UserConnectionAdd(CM_USER_CONNECTION* UserConnection);
 CM_ERROR UserConnectionRemove(CM_USER_CONNECTION* UserConnection);
+
+CM_ERROR UserConnectionListOnlineUsers(CM_USER_CONNECTION* UserConnection);

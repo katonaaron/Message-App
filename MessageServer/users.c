@@ -464,6 +464,38 @@ CM_ERROR UserConnectionRemove(CM_USER_CONNECTION * UserConnection)
     return CM_SUCCESS;
 }
 
+CM_ERROR UserConnectionListOnlineUsers(CM_USER_CONNECTION * UserConnection)
+{
+    if (!gIsUsersInitialized)
+        return CM_MODULE_NOT_INITIALIZED;
+    if (NULL == UserConnection)
+        return CM_INVALID_PARAMETER;
+
+    PLIST_ENTRY node = NULL;
+    CM_ERROR result = CM_SUCCESS;
+    CM_USER* user = NULL;
+
+    AcquireSRWLockShared(gUsersGuard);
+    node = gUsers->Flink;
+    while (node != gUsers)
+    {
+        user = CONTAINING_RECORD(node, CM_USER, Entry);
+        if (user->IsLoggedIn)
+        {
+            result = SendMessageToClient(UserConnection->Client, user->Username, (CM_SIZE)GET_STRING_SIZE(_tcslen(user->Username) + 1), CM_LIST);
+
+            _tprintf_s(TEXT("%s"), user->Username);
+        }
+        if (result)
+            goto cleanup;
+        node = node->Flink;
+    }
+
+cleanup:
+    ReleaseSRWLockShared(gUsersGuard);
+    return result;
+}
+
 void UserFileInit(CM_USER_FILE * UserFile)
 {
     InitializeSRWLock(&UserFile->FileGuard);

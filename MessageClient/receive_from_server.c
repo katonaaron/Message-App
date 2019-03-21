@@ -23,7 +23,7 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
             PrintError(GetLastError(), TEXT("WaitForSingleObject"));
             goto receive_from_server_cleanup;
         }
-        if (CM_IS_ERROR(error))
+        if (error)
         {
             PrintError(error, TEXT("ReceiveMessageFromServer"));
             goto receive_from_server_cleanup;
@@ -118,6 +118,7 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
         case CM_SENDFILE:
             break;
         case CM_LIST:
+            _tprintf_s(TEXT("%s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_HISTORY:
             break;
