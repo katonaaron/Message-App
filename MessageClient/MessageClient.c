@@ -11,7 +11,7 @@ int _tmain(int argc, TCHAR* argv[])
     UNREFERENCED_PARAMETER(argv);
 
     //Debug
-    EnableCommunicationModuleLogger();
+    //EnableCommunicationModuleLogger();
 
     INT retVal = 0, rollback = 0;
     CM_ERROR error;

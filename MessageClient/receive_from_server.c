@@ -140,7 +140,9 @@ DWORD WINAPI ReceiveFromServer(LPVOID Param)
             TCHAR* buffer = (TCHAR*)message->Buffer;
             TCHAR last = buffer[length - 1];
             buffer[length - 1] = 0;
-            _tprintf_s(TEXT("Message%*s%c"), (int)length, buffer, last);
+            _tprintf_s(TEXT("Message%*s"), (int)length, buffer);
+            if(last)
+                _tprintf_s(TEXT("%c"), last);
         }
         break;
         default:

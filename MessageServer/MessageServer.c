@@ -60,7 +60,7 @@ int _tmain(int argc, TCHAR* argv[])
     }
 
     //DEBUG
-    EnableCommunicationModuleLogger();
+   // EnableCommunicationModuleLogger();
 
     error = InitUsersModule(maxConnections);
     if (error)

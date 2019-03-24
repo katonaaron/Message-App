@@ -97,10 +97,10 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             break;
         }
         case CM_BROADCAST:
-            _tprintf_s(TEXT("broadcast: %s\n"), (TCHAR*)message->Buffer);
+            //_tprintf_s(TEXT("broadcast: %s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_SENDFILE:
-            _tprintf_s(TEXT("file will be sent to: %s\n"), (TCHAR*)message->Buffer);
+            //_tprintf_s(TEXT("file will be sent to: %s\n"), (TCHAR*)message->Buffer);
             break;
         case CM_LIST:
         {
@@ -114,7 +114,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
         break;
         case CM_HISTORY:
         {
-            TCHAR *username, *count, *next_token = NULL;
+           /* TCHAR *username, *count, *next_token = NULL;
             username = _tcstok_s((TCHAR*)message->Buffer, TEXT(" \n"), &next_token);
             count = _tcstok_s(NULL, TEXT("\n"), &next_token);
             if (NULL == username)
@@ -129,7 +129,7 @@ VOID CALLBACK ProcessClient(PTP_CALLBACK_INSTANCE Instance, PVOID Parameter, PTP
             {
                 _tprintf_s(TEXT("history: username: %s, count: %d\n"), username, _tstoi(count));
             }
-            break;
+            break;*/
         }
         case CM_EXIT:
             exit = TRUE;

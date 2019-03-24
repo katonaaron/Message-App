@@ -483,8 +483,6 @@ CM_ERROR UserConnectionListOnlineUsers(CM_USER_CONNECTION * UserConnection)
         if (user->IsLoggedIn)
         {
             result = SendMessageToClient(UserConnection->Client, user->Username, (CM_SIZE)GET_STRING_SIZE(_tcslen(user->Username) + 1), CM_LIST);
-
-            _tprintf_s(TEXT("%s"), user->Username);
         }
         if (result)
             goto cleanup;
@@ -626,10 +624,6 @@ CM_ERROR UserReceiveOfflineMessages(CM_USER * User)
         result = SendMessageToClient(User->Connection->Client, prev, (CM_SIZE)GET_STRING_SIZE(next - prev + 1), CM_MSG_TEXT);
         if (result)
             goto cleanup;
-        for (int i = 0; i < next - prev + 1; i++)
-        {
-            _tprintf_s(TEXT("%c"), prev[i]);
-        }
         prev = next + 1;
     }
 
